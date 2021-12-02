@@ -4,9 +4,9 @@ set -ueo pipefail
 # Config directory
 #===================================
 # Please specify the JAMR home here.
-JAMR_HOME=/Users/yijialiu/work/projects/jamr/
+JAMR_HOME=/home/emili/git/jamr
 # Please specify the TAMR home here.
-TAMR_HOME=/Users/yijialiu/work/projects/tamr/
+TAMR_HOME=/home/emili/git/tamr
 
 if [ -z "$TAMR_HOME" ]; then
     echo 'Error: please specify $TAMR_HOME'

@@ -338,3 +338,5 @@ analysis/
 output/
 parser_l2r*
 *.pdf
+
+glove.840B.300d*

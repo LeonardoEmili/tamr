@@ -416,20 +416,25 @@ class Alignment(object):
         :param verbose:
         :return:
         """
-        if node.name != 'date-entity':
-            return False
-        for edge in self.edges_by_parents[node.level]:
-            if edge.relation in self.kDateEntityRelations:
-                # mod is for utterances like: 'earlier in 2008'
-                if consider_alignment:
-                    child_node = self.get_node_by_level(edge.tgt_level)
-                    if not node.same_alignment(child_node, nil_as=True):
-                        return False
-            elif edge.relation != 'mod':
-                if verbose:
-                    print('{0}: unexpected date entity relation: {1}'.format(self.n, edge), file=sys.stderr)
+        try:
+            if node.name != 'date-entity':
                 return False
-        return True
+            for edge in self.edges_by_parents[node.level]:
+                if edge.relation in self.kDateEntityRelations:
+                    # mod is for utterances like: 'earlier in 2008'
+                    if consider_alignment:
+                        child_node = self.get_node_by_level(edge.tgt_level)
+                        if not node.same_alignment(child_node, nil_as=True):
+                            return False
+                elif edge.relation != 'mod':
+                    if verbose:
+                        print('{0}: unexpected date entity relation: {1}'.format(self.n, edge), file=sys.stderr)
+                    return False
+            return True
+        except Exception as e:
+            print("TODO: cases I cannot handle", file=sys.stderr)
+            print("- eight years ago => (b / before :op1 (n / now) :quant (d / date-entity :quant 8 :unit (y / year)))", file=sys.stderr)
+            raise e
 
     def is_date_entity_attributes(self, node):
         """

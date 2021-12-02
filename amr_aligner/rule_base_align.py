@@ -3,6 +3,9 @@ from __future__ import unicode_literals
 from __future__ import print_function
 import argparse
 import sys
+reload(sys)
+sys.setdefaultencoding('utf8')
+
 import itertools
 import datetime
 import codecs
@@ -117,90 +120,93 @@ def align(opt):
     oracle = Oracle(verbose=False)
     fpo = codecs.open(opt.output, 'w', encoding='utf-8') if opt.output else sys.stdout
     for block in reader:
-        graph = Alignment(block)
-        if opt.verbose:
-            print('Aligning {0}'.format(graph.n), file=sys.stderr)
+        try:
+            graph = Alignment(block)
+            if opt.verbose:
+                print('Aligning {0}'.format(graph.n), file=sys.stderr)
 
-        best_alignment = [(n.level, None, n.alignment[0], n.alignment[1]) for n in graph.true_nodes() if n.alignment]
-        actions, states = oracle.parse(graph)
-        pred_amr_graph = str(states.arcs_)
-        baseline_f_score, baseline_n_actions = best_f_score, best_n_actions = \
-            smatch(graph.amr_graph, pred_amr_graph), len(actions)
+            best_alignment = [(n.level, None, n.alignment[0], n.alignment[1]) for n in graph.true_nodes() if n.alignment]
+            actions, states = oracle.parse(graph)
+            pred_amr_graph = str(states.arcs_)
+            baseline_f_score, baseline_n_actions = best_f_score, best_n_actions = \
+                smatch(graph.amr_graph, pred_amr_graph), len(actions)
 
-        words = graph.tok
-        postags = graph.pos if hasattr(graph, 'pos') else [None for _ in range(len(words))]
-        stemmed_words = [stemmer.stem(word, postag) for word, postag in zip(words, postags)]
+            words = graph.tok
+            postags = graph.pos if hasattr(graph, 'pos') else [None for _ in range(len(words))]
+            stemmed_words = [stemmer.stem(word, postag) for word, postag in zip(words, postags)]
 
-        results = AlignedResults()
-        for matcher in matchers:
-            matcher.match(words, stemmed_words, postags, graph, results)
-        added = True
-        while added:
-            added = False
-            for updater in updaters:
-                added = added or updater.update(words, graph, results)
+            results = AlignedResults()
+            for matcher in matchers:
+                matcher.match(words, stemmed_words, postags, graph, results)
+            added = True
+            while added:
+                added = False
+                for updater in updaters:
+                    added = added or updater.update(words, graph, results)
 
-        unaligned = [(n.level, n.name) for n in graph.true_nodes() if n.level not in results.levels_to_spans]
-        if len(unaligned) > 0:
-            unaligned_records.append((graph.n, unaligned))
+            unaligned = [(n.level, n.name) for n in graph.true_nodes() if n.level not in results.levels_to_spans]
+            if len(unaligned) > 0:
+                unaligned_records.append((graph.n, unaligned))
 
-        if opt.report_only:
-            continue
+            if opt.report_only:
+                continue
 
-        n_test = number_of_enumerate_alignment(results)
-        if opt.verbose:
-            print(' - Going to enumerate {0}'.format(n_test), file=sys.stderr)
-        if not opt.improve_perfect and baseline_f_score == 1.:
-            print(' - Best already achieved.', file=sys.stderr)
-        elif n_test > opt.trials:
-            print(' - Too many test!', file=sys.stderr)
-        else:
-            for alignment in enumerate_alignment(results):
-                fill_alignment(graph, alignment)
-
-                actions, states = oracle.parse(graph)
-                pred_amr_graph = str(states.arcs_)
-                pred_f_score, pred_n_actions = smatch(graph.amr_graph, pred_amr_graph), len(actions)
-                if pred_f_score > best_f_score or \
-                        (pred_f_score == best_f_score and pred_n_actions < best_n_actions):
-                    best_f_score = pred_f_score
-                    best_n_actions = pred_n_actions
-                    best_alignment = alignment[:]
-
-        if opt.verbose:
-            if best_f_score > baseline_f_score or \
-                    (best_f_score == baseline_f_score and best_n_actions < baseline_n_actions):
-                print(' - Better achieved!'.format(graph.n), file=sys.stderr)
+            n_test = number_of_enumerate_alignment(results)
+            if opt.verbose:
+                print(' - Going to enumerate {0}'.format(n_test), file=sys.stderr)
+            if not opt.improve_perfect and baseline_f_score == 1.:
+                print(' - Best already achieved.', file=sys.stderr)
+            elif n_test > opt.trials:
+                print(' - Too many test!', file=sys.stderr)
             else:
-                print(' - Stay the same.'.format(graph.n), file=sys.stderr)
+                for alignment in enumerate_alignment(results):
+                    fill_alignment(graph, alignment)
 
-        fill_alignment(graph, best_alignment)
-        output = alignment_string(graph)
-        now = datetime.datetime.now()
-        output = '# ::alignments {0} ::annotator aligner3.py ::date {1} ::parser {2} ::smatch {3} ' \
-                 '::n_actions {4}'.format(output, now, oracle.name, best_f_score, best_n_actions)
-        if not opt.show_all:
-            print(graph.n, file=fpo)
-            print(output, end='\n\n', file=fpo)
-        else:
-            block = graph.block
-            for line in block:
-                if line.startswith("#"):
-                    if line.startswith('# ::alignments'):
-                        print(output, file=fpo)
-                    elif line.startswith('# ::node'):
-                        tokens = line.split()
-                        level = tokens[2]
-                        alignment = graph.get_node_by_level(level).alignment
-                        print('# ::node\t{0}\t{1}\t{2}'.format(
-                            tokens[2], tokens[3], '{0}-{1}'.format(alignment[0], alignment[1]) if alignment else ''),
-                            file=fpo)
-                    else:
-                        print(line, file=fpo)
+                    actions, states = oracle.parse(graph)
+                    pred_amr_graph = str(states.arcs_)
+                    pred_f_score, pred_n_actions = smatch(graph.amr_graph, pred_amr_graph), len(actions)
+                    if pred_f_score > best_f_score or \
+                            (pred_f_score == best_f_score and pred_n_actions < best_n_actions):
+                        best_f_score = pred_f_score
+                        best_n_actions = pred_n_actions
+                        best_alignment = alignment[:]
+
+            if opt.verbose:
+                if best_f_score > baseline_f_score or \
+                        (best_f_score == baseline_f_score and best_n_actions < baseline_n_actions):
+                    print(' - Better achieved!'.format(graph.n), file=sys.stderr)
                 else:
-                    print(graph.amr_graph, file=fpo, end='\n\n')
-                    break
+                    print(' - Stay the same.'.format(graph.n), file=sys.stderr)
 
+            fill_alignment(graph, best_alignment)
+            output = alignment_string(graph)
+            now = datetime.datetime.now()
+            output = '# ::alignments {0} ::annotator aligner3.py ::date {1} ::parser {2} ::smatch {3} ' \
+                    '::n_actions {4}'.format(output, now, oracle.name, best_f_score, best_n_actions)
+            if not opt.show_all:
+                print(graph.n, file=fpo)
+                print(output, end='\n\n', file=fpo)
+            else:
+                block = graph.block
+                for line in block:
+                    if line.startswith("#"):
+                        if line.startswith('# ::alignments'):
+                            print(output, file=fpo)
+                        elif line.startswith('# ::node'):
+                            tokens = line.split()
+                            level = tokens[2]
+                            alignment = graph.get_node_by_level(level).alignment
+                            print('# ::node\t{0}\t{1}\t{2}'.format(
+                                tokens[2], tokens[3], '{0}-{1}'.format(alignment[0], alignment[1]) if alignment else ''),
+                                file=fpo)
+                        else:
+                            print(line, file=fpo)
+                    else:
+                        print(graph.amr_graph, file=fpo, end='\n\n')
+                        break
+        except Exception as e:
+            if opt.verbose:
+                print("Skipping graph because " + str(e), file=sys.stderr)
     dump_unaligned_records(unaligned_records)
 
 
