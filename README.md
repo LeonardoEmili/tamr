@@ -26,7 +26,7 @@ The code for AMR aligner is under `${TAMR_ALIGNER}`.
 - nltk
 - gensim
 - penman
-- Cython (optional, for fast_smatch.py)
+- Cython (optional, [Fast Smatch installation guide](https://github.com/LeonardoEmili/tamr/blob/master/amr_aligner/smatch/README.md))
 
 ### Prepare resource
 We use `word2vec` for semantic matching. See the [README.md](https://github.com/Oneplus/tamr/tree/master/amr_aligner/resources/word2vec)
